@@ -27,3 +27,5 @@ libraryDependencies ++= Seq(
 
 libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.4.14"
 libraryDependencies += "io.scalaland"  %% "chimney"         % "0.8.5"
+libraryDependencies += "com.github.pureconfig" %% "pureconfig" % "0.17.6"
+
