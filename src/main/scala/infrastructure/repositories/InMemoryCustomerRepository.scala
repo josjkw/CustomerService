@@ -1,7 +1,7 @@
 package infrastructure.repositories
 
 import cats.effect.IO
-import cats.implicits.{catsSyntaxNestedFoldable, catsSyntaxParallelSequence_}
+import cats.implicits.{catsSyntaxNestedFoldable, catsSyntaxParallelSequence_, toTraverseOps}
 import domain.{Customer, CustomerId}
 import domain.CustomerRepository.CustomerRepository
 
@@ -21,6 +21,13 @@ class InMemoryCustomerRepository extends CustomerRepository[IO] {
 
   override def get(customerId: CustomerId): IO[Option[Customer]] = IO.pure(inMemoryRepo.get(customerId))
 
-  override def addBatch(customers: Set[Customer]): IO[Unit] = customers.map(c => add(c)).toList.sequence_
+  override def addBatch(customers: Set[Customer]): IO[Unit] = {
+    customers.toList.traverse { add(_).attempt }.flatMap { results =>
+      results.collect { case Left(error) => error } match {
+        case Nil    => IO.unit
+        case errors => IO.raiseError(new Exception(errors.map(_.getMessage).mkString("; ")))
+      }
+    }
+  }
 
 }
