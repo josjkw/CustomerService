@@ -8,7 +8,7 @@ import org.http4s.server.Router
 import org.http4s.implicits._
 
 object Server extends IOApp {
-  private val customerRepo = new InMemoryCustomerRepository
+  private val customerRepo = new InMemoryCustomerRepository[IO]
   val customerService      = new CustomerService[IO](customerRepo)
 
   private val httpApp: HttpApp[IO] = Router(

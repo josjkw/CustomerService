@@ -1,31 +1,31 @@
 package infrastructure.repositories
 
-import cats.effect.IO
-import cats.implicits.{catsSyntaxNestedFoldable, catsSyntaxParallelSequence_, toTraverseOps}
-import domain.{Customer, CustomerId}
+import cats.MonadThrow
+import cats.implicits.{catsSyntaxApplicativeError, toFlatMapOps, toTraverseOps}
 import domain.CustomerRepository.CustomerRepository
+import domain.{Customer, CustomerId}
 
-class InMemoryCustomerRepository extends CustomerRepository[IO] {
+class InMemoryCustomerRepository[F[_]: MonadThrow] extends CustomerRepository[F] {
 
   private var inMemoryRepo: Map[CustomerId, Customer] = Map()
 
-  override def add(customer: Customer): IO[Unit] = {
+  override def add(customer: Customer): F[Unit] = {
     if (inMemoryRepo.contains(customer.id)) {
-      IO.raiseError(new Exception(s"Customer ${customer.name} already exists"))
+      MonadThrow[F].raiseError(new Exception(s"Customer ${customer.name} already exists"))
     } else {
       inMemoryRepo = inMemoryRepo + (customer.id -> customer)
-      IO.unit
+      MonadThrow[F].unit
     }
 
   }
 
-  override def get(customerId: CustomerId): IO[Option[Customer]] = IO.pure(inMemoryRepo.get(customerId))
+  override def get(customerId: CustomerId): F[Option[Customer]] = MonadThrow[F].pure(inMemoryRepo.get(customerId))
 
-  override def addBatch(customers: Set[Customer]): IO[Unit] = {
+  override def addBatch(customers: Set[Customer]): F[Unit] = {
     customers.toList.traverse { add(_).attempt }.flatMap { results =>
       results.collect { case Left(error) => error } match {
-        case Nil    => IO.unit
-        case errors => IO.raiseError(new Exception(errors.map(_.getMessage).mkString("; ")))
+        case Nil    => MonadThrow[F].unit
+        case errors => MonadThrow[F].raiseError(new Exception(errors.map(_.getMessage).mkString("; ")))
       }
     }
   }
