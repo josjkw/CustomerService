@@ -1,6 +1,6 @@
 package infrastructure.repositories
 
-import cats.MonadThrow
+import cats.{Monad, MonadThrow}
 import cats.implicits.{catsSyntaxApplicativeError, toFlatMapOps, toTraverseOps}
 import domain.CustomerRepository.CustomerRepository
 import domain.{Customer, CustomerId}

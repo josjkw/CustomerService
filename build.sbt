@@ -2,30 +2,35 @@ ThisBuild / version := "0.1.0-SNAPSHOT"
 
 ThisBuild / scalaVersion := "2.13.13"
 
+val dependencies = Seq(
+  "org.typelevel"     %% "cats-effect"         % "3.5.4",
+  "org.http4s"        %% "http4s-dsl"          % "0.23.18",
+  "org.http4s"        %% "http4s-blaze-server" % "0.23.13",
+  "org.http4s"        %% "http4s-blaze-client" % "0.23.13",
+  "org.http4s"        %% "http4s-circe"        % "0.23.18",
+  "io.circe"          %% "circe-core"          % "0.14.3",
+  "io.circe"          %% "circe-generic"       % "0.14.3",
+  "io.circe"          %% "circe-parser"        % "0.14.3",
+  "ch.qos.logback"    %  "logback-classic"     % "1.4.14",
+  "io.scalaland"      %% "chimney"             % "0.8.5",
+  "com.github.pureconfig" %% "pureconfig"       % "0.17.6",
+  "dev.zio"           %% "zio-http"            % "3.0.0-RC3",
+  "dev.zio"           %% "zio"                 % "2.0.21"
+)
+
 lazy val root = (project in file(".")).settings(
-  name := "CustomerService"
-)
-libraryDependencies += "org.typelevel" %% "cats-effect" % "3.5.4"
-
-val http4sVersion = "0.23.18"
-val http4sBlaze   = "0.23.13"
-
-libraryDependencies ++= Seq(
-  "org.http4s" %% "http4s-dsl"          % http4sVersion,
-  "org.http4s" %% "http4s-blaze-server" % http4sBlaze,
-  "org.http4s" %% "http4s-blaze-client" % http4sBlaze,
-  "org.http4s" %% "http4s-circe"        % http4sVersion,
+  name := "CustomerApp",
+  libraryDependencies ++= dependencies
 )
 
-val circeVersion = "0.14.3"
+lazy val `customer-service` = project
+  .in(file("customer-service"))
+  .settings(
+    libraryDependencies ++= dependencies
+  )
 
-libraryDependencies ++= Seq(
-  "io.circe" %% "circe-core",
-  "io.circe" %% "circe-generic",
-  "io.circe" %% "circe-parser",
-).map(_ % circeVersion)
-
-libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.4.14"
-libraryDependencies += "io.scalaland"  %% "chimney"         % "0.8.5"
-libraryDependencies += "com.github.pureconfig" %% "pureconfig" % "0.17.6"
-
+lazy val `customer-details` = project
+  .in(file("customer-details"))
+  .settings(
+    libraryDependencies ++= dependencies
+  )

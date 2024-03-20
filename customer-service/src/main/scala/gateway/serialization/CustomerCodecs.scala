@@ -1,7 +1,7 @@
 package gateway.serialization
 
 import domain.{Customer, CustomerId, CustomerName}
-import gateway.models.CustomerApi.{CustomerApiInput, CustomerApiOutput}
+import gateway.models.GatewayModels.{CustomerApiInput, CustomerApiOutput}
 import io.circe.Codec
 import io.circe.generic.semiauto.deriveCodec
 import io.scalaland.chimney.Transformer

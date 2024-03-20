@@ -5,8 +5,9 @@ import cats.effect.kernel.Concurrent
 import cats.implicits._
 import domain.{Customer, CustomerId, CustomerService}
 import gateway.transformers.CustomerTransformers._
-import gateway.models.CustomerApi.{CustomerApiInput, CustomerApiOutput}
+import gateway.models.GatewayModels.{CustomerApiInput, CustomerApiOutput, CustomerWithDetailsApiOutput}
 import gateway.serialization.CustomerCodecs.{customerApiInput, customerApiOutput}
+import io.circe.generic.auto.exportEncoder
 import io.circe.syntax._
 import io.scalaland.chimney.dsl.TransformerOps
 import org.http4s.HttpRoutes
@@ -23,7 +24,7 @@ object CustomerRoutes {
     HttpRoutes.of[F] {
       case GET -> Root / "health" => Ok()
       case GET -> Root / "customer" / id =>
-        customerService.get(CustomerId(id)).map(_.transformInto[Option[CustomerApiOutput]]).flatMap {
+        customerService.get(CustomerId(id)).map(_.transformInto[Option[CustomerWithDetailsApiOutput]]).flatMap {
           case Some(customer) => Ok(customer.asJson)
           case None           => NotFound("Customer not found")
         }
