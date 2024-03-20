@@ -5,7 +5,6 @@ import gateway.CustomerRoutes.customerRoutes
 import infrastructure.repositories.InMemoryCustomerRepository
 import infrastructure.repositories.config.ServerConf
 import org.http4s.blaze.server.BlazeServerBuilder
-import org.http4s.client.JavaNetClientBuilder
 import org.http4s.implicits._
 import org.http4s.server.Router
 import pureconfig.ConfigSource
@@ -18,12 +17,10 @@ object Server extends IOApp {
       ConfigSource.default.load[ServerConf].leftMap(error => new RuntimeException(s"Failed to load config $error"))
     )
 
-  private def buildCustomerService = {
-    val client          = HttpClient[IO](8080, "127.0.0.1")
-    val client2         = JavaNetClientBuilder[IO].create
-    val customerRepo    = new InMemoryCustomerRepository[IO]
-    val customerService = new CustomerService[IO](customerRepo, new HttpClient[IO](8080, "127.0.0.1")(client2))
-    customerService
+  private def buildCustomerService: CustomerService[IO] = {
+    val client       = HttpClient[IO](8080, "127.0.0.1")
+    val customerRepo = new InMemoryCustomerRepository[IO]
+    new CustomerService[IO](customerRepo, client)
   }
 
   override def run(args: List[String]): IO[ExitCode] = {
