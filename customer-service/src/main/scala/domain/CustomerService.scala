@@ -1,8 +1,8 @@
 package domain
 
-import cats.{MonadThrow, Monoid}
-import domain.CustomerRepository.CustomerRepository
+import cats.MonadThrow
 import cats.syntax.all._
+import domain.CustomerRepository.CustomerRepository
 
 class CustomerService[F[_]: MonadThrow](repository: CustomerRepository[F], client: HttpClient[F]) {
   def create(customer: Customer): F[Unit]            = repository.add(customer)
