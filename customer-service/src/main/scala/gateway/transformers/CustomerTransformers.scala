@@ -1,7 +1,7 @@
 package gateway.transformers
 
 import domain.{Customer, CustomerDetails, CustomerId, CustomerName, CustomerWithDetails}
-import gateway.models.GatewayModels.{CustomerApiInput, CustomerApiOutput, CustomerWithDetailsApiOutput}
+import gateway.models.GatewayModels.{CustomerApiInput, CustomerApiOutput, CustomerDetailsApiOutput, CustomerWithDetailsApiOutput}
 import io.scalaland.chimney.Transformer
 
 object CustomerTransformers {
@@ -11,7 +11,7 @@ object CustomerTransformers {
 
   implicit val customerWithDetailsToCustomerWithDetailsApiOutput
       : Transformer[CustomerWithDetails, CustomerWithDetailsApiOutput] = (cwd: CustomerWithDetails) =>
-    CustomerWithDetailsApiOutput(cwd.id.value, cwd.name.value, cwd.data.data)
+    CustomerWithDetailsApiOutput(cwd.id.value, cwd.name.value, CustomerDetailsApiOutput(cwd.data.data))
 
   implicit val customerApiInputToCustomer: Transformer[CustomerApiInput, Customer] =
     (customerApiInput: CustomerApiInput) =>

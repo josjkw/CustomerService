@@ -14,13 +14,6 @@ val dependencies = Seq(
   "ch.qos.logback"    %  "logback-classic"     % "1.4.14",
   "io.scalaland"      %% "chimney"             % "0.8.5",
   "com.github.pureconfig" %% "pureconfig"       % "0.17.6",
-  "dev.zio"           %% "zio-http"            % "3.0.0-RC3",
-  "dev.zio"           %% "zio"                 % "2.0.21"
-)
-
-lazy val root = (project in file(".")).settings(
-  name := "CustomerApp",
-  libraryDependencies ++= dependencies
 )
 
 lazy val `customer-service` = project

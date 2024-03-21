@@ -1,9 +1,9 @@
 import cats.effect._
 import cats.implicits.toBifunctorOps
-import domain.{CustomerService, HttpClient}
 import gateway.CustomerRoutes.customerRoutes
-import infrastructure.repositories.InMemoryCustomerRepository
-import infrastructure.repositories.config.ServerConf
+import cats.effect.Async
+import infrastructure.config.Configs.CustomerServiceConfig
+import infrastructure.modules.{CustomerDetailsModule, CustomerModule, HttpClientModule}
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.implicits._
 import org.http4s.server.Router
@@ -12,29 +12,32 @@ import pureconfig.generic.auto._
 
 object Server extends IOApp {
 
-  private def loadConfig: IO[ServerConf] =
+  private def loadConfig: IO[CustomerServiceConfig] =
     IO.fromEither(
-      ConfigSource.default.load[ServerConf].leftMap(error => new RuntimeException(s"Failed to load config $error"))
+      ConfigSource.default
+        .load[CustomerServiceConfig]
+        .leftMap(error => new RuntimeException(s"Failed to load config $error"))
     )
-
-  private def buildCustomerService: CustomerService[IO] = {
-    val client       = HttpClient[IO](8080, "127.0.0.1")
-    val customerRepo = new InMemoryCustomerRepository[IO]
-    new CustomerService[IO](customerRepo, client)
-  }
 
   override def run(args: List[String]): IO[ExitCode] = {
 
     for {
-      serverConfig    <- loadConfig
-      customerService <- IO.pure(buildCustomerService)
+      config             <- loadConfig
+      customerRepository <- CustomerModule.customerInMemoryRepository[IO](Map())
+      httpClient         <- HttpClientModule.getHttpClient[IO]
+      customerDetailsRepository <- CustomerDetailsModule.customerDetailsRepository[IO](
+        config.customerDetailsServiceConfig,
+        httpClient,
+      )
+      customerDetailsService <- CustomerDetailsModule.customerDetails(customerDetailsRepository)
+      customerService        <- CustomerModule.customerService[IO](customerRepository, customerDetailsService)
       httpApp <- IO.pure(
         Router(
           "/api" -> customerRoutes[IO](customerService)
         ).orNotFound
       )
       server <- BlazeServerBuilder[IO]
-        .bindHttp(serverConfig.port, serverConfig.host)
+        .bindHttp(config.serverConf.port, config.serverConf.host)
         .withHttpApp(httpApp)
         .serve
         .compile

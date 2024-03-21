@@ -3,10 +3,10 @@ package gateway
 import cats.MonadThrow
 import cats.effect.kernel.Concurrent
 import cats.implicits._
-import domain.{Customer, CustomerId, CustomerService}
+import domain.services.CustomerService
+import domain.{Customer, CustomerId}
+import gateway.models.GatewayModels.{CustomerApiInput, CustomerWithDetailsApiOutput}
 import gateway.transformers.CustomerTransformers._
-import gateway.models.GatewayModels.{CustomerApiInput, CustomerApiOutput, CustomerWithDetailsApiOutput}
-import gateway.serialization.CustomerCodecs.{customerApiInput, customerApiOutput}
 import io.circe.generic.auto.exportEncoder
 import io.circe.syntax._
 import io.scalaland.chimney.dsl.TransformerOps
@@ -24,7 +24,7 @@ object CustomerRoutes {
     HttpRoutes.of[F] {
       case GET -> Root / "health" => Ok()
       case GET -> Root / "customer" / id =>
-        customerService.get(CustomerId(id)).map(_.transformInto[Option[CustomerWithDetailsApiOutput]]).flatMap {
+        customerService.get(CustomerId(id)).value.map(_.transformInto[Option[CustomerWithDetailsApiOutput]]).flatMap {
           case Some(customer) => Ok(customer.asJson)
           case None           => NotFound("Customer not found")
         }
