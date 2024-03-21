@@ -1,13 +1,13 @@
 package infrastructure.repositories
 
-import cats.MonadThrow
+import cats.data.OptionT
+import cats.{Monad, MonadThrow}
 import cats.implicits.{catsSyntaxApplicativeError, toFlatMapOps, toTraverseOps}
-import domain.CustomerRepository.CustomerRepository
+import domain.repositories.CustomerRepository.CustomerRepository
 import domain.{Customer, CustomerId}
 
-class InMemoryCustomerRepository[F[_]: MonadThrow] extends CustomerRepository[F] {
-
-  private var inMemoryRepo: Map[CustomerId, Customer] = Map()
+class InMemoryCustomerRepository[F[_]: MonadThrow](var inMemoryRepo: Map[CustomerId, Customer])
+    extends CustomerRepository[F] {
 
   override def add(customer: Customer): F[Unit] = {
     if (inMemoryRepo.contains(customer.id)) {
@@ -19,7 +19,7 @@ class InMemoryCustomerRepository[F[_]: MonadThrow] extends CustomerRepository[F]
 
   }
 
-  override def get(customerId: CustomerId): F[Option[Customer]] = MonadThrow[F].pure(inMemoryRepo.get(customerId))
+  override def get(customerId: CustomerId): OptionT[F, Customer] = OptionT.fromOption(inMemoryRepo.get(customerId))
 
   override def addBatch(customers: Set[Customer]): F[Unit] = {
     customers.toList.traverse { add(_).attempt }.flatMap { results =>
