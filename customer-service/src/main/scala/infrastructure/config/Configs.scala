@@ -7,6 +7,7 @@ object Configs {
   final case class CustomerServiceConfig(
       serverConf: ServerConf,
       customerDetailsServiceConfig: CustomerDetailsServiceConfig,
+      customerDetailsLegacyConfig: CustomerDetailsServiceConfig,
   )
 
 }
