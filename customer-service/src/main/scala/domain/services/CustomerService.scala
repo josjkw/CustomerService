@@ -7,14 +7,24 @@ import domain.repositories.CustomerRepository.CustomerRepository
 import domain.{Customer, CustomerId, CustomerWithDetails}
 
 class CustomerService[F[_]: MonadThrow](repository: CustomerRepository[F])(
-    customerDetailsService: CustomerDetailsService[F]
+    customerDetailsServices: CustomerDetailsService[F]*
 ) {
   def create(customer: Customer): F[Unit]            = repository.add(customer)
   def createBatch(customers: Set[Customer]): F[Unit] = repository.addBatch(customers)
 
   def get(id: CustomerId): OptionT[F, CustomerWithDetails] = for {
-    customer        <- repository.get(id)
-    customerDetails <- customerDetailsService.getCustomerDetails(id.value)
-  } yield CustomerWithDetails(customer.id, customer.name, customerDetails)
+    customer <- repository.get(id)
+    customerWithDetails <-
+      OptionT.liftF(
+        customerDetailsServices
+          .map(customerDetailsService => customerDetailsService.getCustomerDetails(id.value))
+          .traverse(_.value)
+          .map(cd =>
+            cd.collectFirst { case Some(customerDetails) =>
+              CustomerWithDetails(customer.id, customer.name, Some(customerDetails))
+            }.getOrElse(CustomerWithDetails(customer.id, customer.name, None))
+          )
+      )
+  } yield customerWithDetails
 
 }

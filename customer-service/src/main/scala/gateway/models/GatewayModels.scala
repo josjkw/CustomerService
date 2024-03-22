@@ -25,6 +25,6 @@ object GatewayModels {
 
   }
 
-  final case class CustomerWithDetailsApiOutput(id: String, name: String, data: CustomerDetailsApiOutput)
+  final case class CustomerWithDetailsApiOutput(id: String, name: String, data: Option[CustomerDetailsApiOutput])
 
 }
