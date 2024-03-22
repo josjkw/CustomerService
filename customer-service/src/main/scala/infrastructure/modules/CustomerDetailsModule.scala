@@ -1,6 +1,6 @@
 package infrastructure.modules
 
-import cats.{Monad, MonadThrow}
+import cats.MonadThrow
 import cats.effect.Async
 import domain.repositories.CustomerDetailsRepository
 import domain.services.CustomerDetailsService
@@ -22,7 +22,10 @@ object CustomerDetailsModule {
   ): F[CustomerDetailsLegacyHttpRepository[F]] =
     Async[F].pure(new CustomerDetailsLegacyHttpRepository[F](httpConfig, httpClient))
 
-  def customerDetails[F[_]: MonadThrow](repository: CustomerDetailsRepository[F]): F[CustomerDetailsService[F]] =
-    MonadThrow[F].pure(new CustomerDetailsService[F](repository))
+  def customerDetails[F[_]: MonadThrow](
+      executionPriority: Int,
+      repository: CustomerDetailsRepository[F],
+  ): F[CustomerDetailsService[F]] =
+    MonadThrow[F].pure(new CustomerDetailsService[F](executionPriority, repository))
 
 }
