@@ -29,13 +29,9 @@ object Server extends IOApp {
         httpClient,
       )
       customerDetailsService <- CustomerDetailsModule.customerDetails(1, customerDetailsRepository)
-      customerDetailsLegacyRepository <- CustomerDetailsModule.customerDetailsLegacyRepository[IO](
-        config.customerDetailsLegacyConfig,
-        httpClient,
-      )
-      customerDetailsLegacyService <- CustomerDetailsModule.customerDetails(2, customerDetailsLegacyRepository)
+
       customerService <- CustomerModule
-        .customerService[IO](customerRepository, customerDetailsService, customerDetailsLegacyService)
+        .customerService[IO](customerRepository, customerDetailsService)
       httpApp <- IO.pure(
         Router(
           "/api" -> customerRoutes[IO](customerService)

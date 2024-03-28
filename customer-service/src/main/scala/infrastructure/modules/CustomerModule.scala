@@ -14,8 +14,8 @@ object CustomerModule {
 
   def customerService[F[_]: MonadThrow](
       customerRepository: CustomerRepository[F],
-      customerDetailsService: CustomerDetailsService[F]*,
+      customerDetailsService: CustomerDetailsService[F],
   ): F[CustomerService[F]] =
-    MonadThrow[F].pure(new CustomerService[F](customerRepository)(customerDetailsService: _*))
+    MonadThrow[F].pure(new CustomerService[F](customerRepository)(customerDetailsService))
 
 }
