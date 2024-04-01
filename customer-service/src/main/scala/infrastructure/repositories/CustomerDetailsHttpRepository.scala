@@ -2,8 +2,7 @@ package infrastructure.repositories
 
 import cats.data.OptionT
 import cats.effect.Async
-import cats.effect.implicits.genSpawnOps
-import cats.effect.kernel.{Concurrent, Fiber, Outcome}
+import cats.effect.kernel.{Fiber, Outcome}
 import cats.implicits._
 import domain.CustomerDetails
 import domain.repositories.CustomerDetailsRepository
@@ -22,29 +21,29 @@ class CustomerDetailsHttpRepository[F[_]: Async](config: CustomerDetailsServiceC
     extends CustomerDetailsRepository[F] {
 
   private val root = Uri.unsafeFromString(
-    s"http://${config.customerDetailsConfig.host}:${config.customerDetailsLegacyConfig.port}/internal"
+    s"http://${config.customerDetailsConfig.host}:${config.customerDetailsConfig.port}/internal"
   )
 
   private val rootLegacyRepository = Uri.unsafeFromString(
-    s"http://${config.customerDetailsConfig.host}:${config.customerDetailsConfig.port}/internal/legacy"
+    s"http://${config.customerDetailsLegacyConfig.host}:${config.customerDetailsLegacyConfig.port}/internal/legacy"
   )
 
   private def handleRepositoryFibers(
       res: Outcome[F, Throwable, Option[CustomerDetails]],
       fiber: Fiber[F, Throwable, Option[CustomerDetails]],
-  ) = res match {
+  ): F[Option[CustomerDetails]] = res match {
     case Outcome.Succeeded(firstRepoDetails) =>
       firstRepoDetails.flatMap {
         case Some(_) => firstRepoDetails
         case None =>
           fiber.join.flatMap {
             case Outcome.Succeeded(secondRepoDetails) => secondRepoDetails
-            case Outcome.Errored(e)                   => ???
-            case Outcome.Canceled()                   => ???
-          }
+            case Outcome.Errored(e)                   => Async[F].pure(println(s"Error with fiber $fiber: $e")) *> Async[F].pure(None)
+            case Outcome.Canceled()                   => Async[F].pure(None)
+          }: F[Option[CustomerDetails]]
       }
-    case Outcome.Errored(e) => ???
-    case Outcome.Canceled() => ???
+    case Outcome.Errored(e) => Async[F].pure(println(s"Error with fiber $fiber: $e")) *> Async[F].pure(None)
+    case Outcome.Canceled() => Async[F].pure(None)
   }
 
   override def getDetails(id: String): OptionT[F, CustomerDetails] = {
