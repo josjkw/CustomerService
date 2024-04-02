@@ -49,7 +49,9 @@ class CustomerDetailsHttpRepository[F[_]: Async](config: CustomerDetailsServiceC
           }: F[Option[CustomerDetails]]
       }
     case Outcome.Errored(e) =>
-      Async[F].raiseError(new RuntimeException(s"Unexpected runtime error with with fiber $fiber: $e"))
+      fiber.cancel *> Async[F].raiseError(
+        new RuntimeException(s"Unexpected runtime error with with fiber $fiber: $e")
+      )
     case Outcome.Canceled() =>
       Async[F].raiseError(
         new IllegalStateException(
