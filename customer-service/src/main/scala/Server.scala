@@ -1,7 +1,6 @@
 import cats.effect._
 import cats.implicits.toBifunctorOps
 import gateway.CustomerRoutes.customerRoutes
-import cats.effect.Async
 import infrastructure.config.Configs.CustomerServiceConfig
 import infrastructure.modules.{CustomerDetailsModule, CustomerModule, HttpClientModule}
 import org.http4s.blaze.server.BlazeServerBuilder
@@ -29,8 +28,10 @@ object Server extends IOApp {
         config.customerDetailsServiceConfig,
         httpClient,
       )
-      customerDetailsService <- CustomerDetailsModule.customerDetails(customerDetailsRepository)
-      customerService        <- CustomerModule.customerService[IO](customerRepository, customerDetailsService)
+      customerDetailsService <- CustomerDetailsModule.customerDetails( customerDetailsRepository)
+
+      customerService <- CustomerModule
+        .customerService[IO](customerRepository, customerDetailsService)
       httpApp <- IO.pure(
         Router(
           "/api" -> customerRoutes[IO](customerService)
