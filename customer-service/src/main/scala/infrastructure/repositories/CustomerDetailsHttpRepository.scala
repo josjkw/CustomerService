@@ -34,16 +34,28 @@ class CustomerDetailsHttpRepository[F[_]: Async](config: CustomerDetailsServiceC
   ): F[Option[CustomerDetails]] = res match {
     case Outcome.Succeeded(firstRepoDetails) =>
       firstRepoDetails.flatMap {
-        case Some(_) => firstRepoDetails
+        case Some(_) => fiber.cancel *> firstRepoDetails: F[Option[CustomerDetails]]
         case None =>
           fiber.join.flatMap {
             case Outcome.Succeeded(secondRepoDetails) => secondRepoDetails
-            case Outcome.Errored(e)                   => Async[F].pure(println(s"Error with fiber $fiber: $e")) *> Async[F].pure(None)
-            case Outcome.Canceled()                   => Async[F].pure(None)
+            case Outcome.Errored(e) =>
+              Async[F].raiseError(new RuntimeException(s"Unexpected runtime error with with fiber $fiber: $e"))
+            case Outcome.Canceled() =>
+              Async[F].raiseError(
+                new IllegalStateException(
+                  "Cancellation during requesting customer details - should never be cancelled other that manually"
+                )
+              )
           }: F[Option[CustomerDetails]]
       }
-    case Outcome.Errored(e) => Async[F].pure(println(s"Error with fiber $fiber: $e")) *> Async[F].pure(None)
-    case Outcome.Canceled() => Async[F].pure(None)
+    case Outcome.Errored(e) =>
+      Async[F].raiseError(new RuntimeException(s"Unexpected runtime error with with fiber $fiber: $e"))
+    case Outcome.Canceled() =>
+      Async[F].raiseError(
+        new IllegalStateException(
+          "Cancellation during requesting customer details - should never be cancelled other that manually"
+        )
+      )
   }
 
   override def getDetails(id: String): OptionT[F, CustomerDetails] = {

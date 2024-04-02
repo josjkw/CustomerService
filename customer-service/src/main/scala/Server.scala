@@ -28,7 +28,7 @@ object Server extends IOApp {
         config.customerDetailsServiceConfig,
         httpClient,
       )
-      customerDetailsService <- CustomerDetailsModule.customerDetails(1, customerDetailsRepository)
+      customerDetailsService <- CustomerDetailsModule.customerDetails( customerDetailsRepository)
 
       customerService <- CustomerModule
         .customerService[IO](customerRepository, customerDetailsService)

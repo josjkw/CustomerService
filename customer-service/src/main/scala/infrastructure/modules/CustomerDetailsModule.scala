@@ -17,8 +17,7 @@ object CustomerDetailsModule {
     Async[F].pure(new CustomerDetailsHttpRepository[F](httpConfig, httpClient))
 
   def customerDetails[F[_]: MonadThrow](
-      executionPriority: Int,
-      repository: CustomerDetailsRepository[F],
+      repository: CustomerDetailsRepository[F]
   ): F[CustomerDetailsService[F]] =
     MonadThrow[F].pure(new CustomerDetailsService[F](repository))
 

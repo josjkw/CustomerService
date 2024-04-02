@@ -14,10 +14,12 @@ class CustomerService[F[_]: MonadThrow](repository: CustomerRepository[F])(
 
   def get(id: CustomerId): OptionT[F, CustomerWithDetails] = for {
     customer <- repository.get(id)
-    customerWithDetails <- OptionT.liftF(customerDetailsServices.getCustomerDetails(id.value).value.map {
-      case Some(customerDetails) => CustomerWithDetails(customer.id, customer.name, Some(customerDetails))
-      case None                  => CustomerWithDetails(customer.id, customer.name, None)
-    })
+    customerWithDetails <- OptionT.liftF(
+      customerDetailsServices
+        .getCustomerDetails(id.value)
+        .value
+        .map(details => CustomerWithDetails(customer.id, customer.name, details))
+    )
   } yield customerWithDetails
 
 }
