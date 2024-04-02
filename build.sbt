@@ -21,6 +21,7 @@ lazy val `customer-service` = project
   .settings(
     libraryDependencies ++= dependencies
   )
+  .dependsOn(`libs`)
 
 lazy val `customer-details` = project
   .in(file("customer-details"))
@@ -30,6 +31,12 @@ lazy val `customer-details` = project
 
 lazy val `customer-details-legacy` = project
   .in(file("customer-details-legacy"))
+  .settings(
+    libraryDependencies ++= dependencies
+  )
+
+lazy val `libs` = project
+  .in(file("libs"))
   .settings(
     libraryDependencies ++= dependencies
   )

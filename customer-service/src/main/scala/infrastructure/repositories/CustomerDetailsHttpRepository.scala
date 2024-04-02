@@ -13,6 +13,10 @@ import org.http4s.Method.GET
 import org.http4s.circe.CirceEntityCodec.circeEntityDecoder
 import org.http4s.client.Client
 import org.http4s.{Request, Uri}
+import retry._
+import retry.retryops.RetryAndDelay
+
+import scala.concurrent.duration.FiniteDuration
 
 final case class CustomerDetailsExternalApiOutput(data: String)
 final case class CustomerDetailsLegacyExternalApiOutput(data: String)
@@ -27,6 +31,9 @@ class CustomerDetailsHttpRepository[F[_]: Async](config: CustomerDetailsServiceC
   private val rootLegacyRepository = Uri.unsafeFromString(
     s"http://${config.customerDetailsLegacyConfig.host}:${config.customerDetailsLegacyConfig.port}/internal/legacy"
   )
+
+  // can be put in config
+  private val legacyRepositoryRetryPolicy = RetryAndDelay(3, FiniteDuration(5, "second"))
 
   private def handleRepositoryFibers(
       res: Outcome[F, Throwable, Option[CustomerDetails]],
@@ -65,12 +72,16 @@ class CustomerDetailsHttpRepository[F[_]: Async](config: CustomerDetailsServiceC
     val customerDetails = httpClient
       .expectOption[CustomerDetailsLegacyExternalApiOutput](Request[F](GET, root / id))
       .map(_.transformInto[Option[CustomerDetails]])
+
     val customerDetailsLegacy = httpClient
-      .expectOption[CustomerDetailsExternalApiOutput](Request[F](GET, rootLegacyRepository / id))
+      .expect[CustomerDetailsExternalApiOutput](Request[F](GET, rootLegacyRepository / id))
       .map(_.transformInto[Option[CustomerDetails]])
 
+    val customerDetailsLegacyRetry =
+      retryingOnAllErrors(customerDetailsLegacy, legacyRepositoryRetryPolicy).handleError(_ => None)
+
     OptionT(for {
-      race <- Async[F].racePair(customerDetails, customerDetailsLegacy)
+      race <- Async[F].racePair(customerDetails, customerDetailsLegacyRetry)
       maybeCustomerDetails <- race match {
         case Left((resLegacy, fiber)) =>
           handleRepositoryFibers(resLegacy, fiber)
