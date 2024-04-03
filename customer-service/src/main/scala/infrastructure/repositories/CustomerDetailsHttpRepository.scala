@@ -14,6 +14,7 @@ import org.http4s.Method.GET
 import org.http4s.circe.CirceEntityCodec.circeEntityDecoder
 import org.http4s.client.Client
 import org.http4s.{Request, Uri}
+import scala.concurrent.duration.DurationInt
 
 import scala.concurrent.duration.Duration
 
@@ -74,7 +75,7 @@ class CustomerDetailsHttpRepository[F[_]: Async](config: CustomerDetailsServiceC
       .map(_.transformInto[Option[CustomerDetails]])
 
     val customerDetailsLegacyRetry =
-      RetryHelpers.retryOnAllErrors(customerDetailsLegacy, Duration.apply(2, "second"), 4).handleError(_ => None)
+      RetryHelpers.retryOnAllErrors(customerDetailsLegacy, 2.seconds, 4).handleError(_ => None)
 
     OptionT(for {
       race <- Async[F].racePair(customerDetails, customerDetailsLegacyRetry)
