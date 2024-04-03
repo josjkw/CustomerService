@@ -28,7 +28,7 @@ object CustomerDetailsLegacyRoutes {
             }
           case _ => NotFound()
         },
-        3.seconds,
+        1.seconds,
       )
 
     }

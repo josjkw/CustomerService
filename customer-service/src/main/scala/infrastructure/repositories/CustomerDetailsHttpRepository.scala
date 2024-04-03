@@ -7,16 +7,15 @@ import cats.implicits._
 import domain.CustomerDetails
 import domain.repositories.CustomerDetailsRepository
 import infrastructure.config.Configs.CustomerDetailsServiceConfig
+import infrastructure.helpers.retryhelpers.RetryHelpers
 import io.circe.generic.auto._
 import io.scalaland.chimney.dsl.TransformerOps
 import org.http4s.Method.GET
 import org.http4s.circe.CirceEntityCodec.circeEntityDecoder
 import org.http4s.client.Client
 import org.http4s.{Request, Uri}
-import retry._
-import retry.retryops.RetryAndDelay
 
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.Duration
 
 final case class CustomerDetailsExternalApiOutput(data: String)
 final case class CustomerDetailsLegacyExternalApiOutput(data: String)
@@ -31,9 +30,6 @@ class CustomerDetailsHttpRepository[F[_]: Async](config: CustomerDetailsServiceC
   private val rootLegacyRepository = Uri.unsafeFromString(
     s"http://${config.customerDetailsLegacyConfig.host}:${config.customerDetailsLegacyConfig.port}/internal/legacy"
   )
-
-  // can be put in config
-  private val legacyRepositoryRetryPolicy = RetryAndDelay(3, FiniteDuration(5, "second"))
 
   private def handleRepositoryFibers(
       res: Outcome[F, Throwable, Option[CustomerDetails]],
@@ -78,7 +74,7 @@ class CustomerDetailsHttpRepository[F[_]: Async](config: CustomerDetailsServiceC
       .map(_.transformInto[Option[CustomerDetails]])
 
     val customerDetailsLegacyRetry =
-      retryingOnAllErrors(customerDetailsLegacy, legacyRepositoryRetryPolicy).handleError(_ => None)
+      RetryHelpers.retryOnAllErrors(customerDetailsLegacy, Duration.apply(2, "second"), 4).handleError(_ => None)
 
     OptionT(for {
       race <- Async[F].racePair(customerDetails, customerDetailsLegacyRetry)
