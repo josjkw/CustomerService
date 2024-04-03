@@ -7,12 +7,16 @@ import cats.implicits._
 import domain.CustomerDetails
 import domain.repositories.CustomerDetailsRepository
 import infrastructure.config.Configs.CustomerDetailsServiceConfig
+import infrastructure.helpers.retryhelpers.RetryHelpers
 import io.circe.generic.auto._
 import io.scalaland.chimney.dsl.TransformerOps
 import org.http4s.Method.GET
 import org.http4s.circe.CirceEntityCodec.circeEntityDecoder
 import org.http4s.client.Client
 import org.http4s.{Request, Uri}
+import scala.concurrent.duration.DurationInt
+
+import scala.concurrent.duration.Duration
 
 final case class CustomerDetailsExternalApiOutput(data: String)
 final case class CustomerDetailsLegacyExternalApiOutput(data: String)
@@ -65,12 +69,16 @@ class CustomerDetailsHttpRepository[F[_]: Async](config: CustomerDetailsServiceC
     val customerDetails = httpClient
       .expectOption[CustomerDetailsLegacyExternalApiOutput](Request[F](GET, root / id))
       .map(_.transformInto[Option[CustomerDetails]])
+
     val customerDetailsLegacy = httpClient
-      .expectOption[CustomerDetailsExternalApiOutput](Request[F](GET, rootLegacyRepository / id))
+      .expect[CustomerDetailsExternalApiOutput](Request[F](GET, rootLegacyRepository / id))
       .map(_.transformInto[Option[CustomerDetails]])
 
+    val customerDetailsLegacyRetry =
+      RetryHelpers.retryOnAllErrors(customerDetailsLegacy, 2.seconds, 4).handleError(_ => None)
+
     OptionT(for {
-      race <- Async[F].racePair(customerDetails, customerDetailsLegacy)
+      race <- Async[F].racePair(customerDetails, customerDetailsLegacyRetry)
       maybeCustomerDetails <- race match {
         case Left((resLegacy, fiber)) =>
           handleRepositoryFibers(resLegacy, fiber)
