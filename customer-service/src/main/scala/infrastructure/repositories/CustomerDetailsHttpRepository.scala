@@ -14,9 +14,8 @@ import org.http4s.Method.GET
 import org.http4s.circe.CirceEntityCodec.circeEntityDecoder
 import org.http4s.client.Client
 import org.http4s.{Request, Uri}
-import scala.concurrent.duration.DurationInt
 
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration.DurationInt
 
 final case class CustomerDetailsExternalApiOutput(data: String)
 final case class CustomerDetailsLegacyExternalApiOutput(data: String)
@@ -31,6 +30,9 @@ class CustomerDetailsHttpRepository[F[_]: Async](config: CustomerDetailsServiceC
   private val rootLegacyRepository = Uri.unsafeFromString(
     s"http://${config.customerDetailsLegacyConfig.host}:${config.customerDetailsLegacyConfig.port}/internal/legacy"
   )
+
+  private def getCustomerDetailsFromElasticSearch: F[Option[CustomerDetails]] =
+    Async[F].sleep(60.millis) *> Async[F].pure(None)
 
   private def handleRepositoryFibers(
       res: Outcome[F, Throwable, Option[CustomerDetails]],
@@ -78,12 +80,25 @@ class CustomerDetailsHttpRepository[F[_]: Async](config: CustomerDetailsServiceC
       RetryHelpers.retryOnAllErrors(customerDetailsLegacy, 2.seconds, 4).handleError(_ => None)
 
     OptionT(for {
-      race <- Async[F].racePair(customerDetails, customerDetailsLegacyRetry)
-      maybeCustomerDetails <- race match {
-        case Left((resLegacy, fiber)) =>
-          handleRepositoryFibers(resLegacy, fiber)
-        case Right((fiber, res)) =>
-          handleRepositoryFibers(res, fiber)
+      // I thought it was affordable to have the elasticSearch query ran first and then only run the other
+      // two repos. First because it's fast and the hit on elastic search should be good with 100k most actives users
+      // (of course depends on the total number of customers I guess) and also to avoid to have fiber spawn and canceled everywhere
+      // with likely useless calls
+      maybeCustomerDetails <- getCustomerDetailsFromElasticSearch.flatMap {
+        // for some reason compilation was broken with Some(customerDetails)
+        // found   : Option[domain.CustomerDetails] => F[_ >: Some[domain.CustomerDetails] <: Option[domain.CustomerDetails]]
+        // [error]  required: Option[domain.CustomerDetails] => F[Option[domain.CustomerDetails]]
+        case Some(customerDetails) => Async[F].pure(Option(customerDetails))
+        case None =>
+          for {
+            race <- Async[F].racePair(customerDetails, customerDetailsLegacyRetry)
+            maybeCustomerDetails <- race match {
+              case Left((resLegacy, fiber)) =>
+                handleRepositoryFibers(resLegacy, fiber)
+              case Right((fiber, res)) =>
+                handleRepositoryFibers(res, fiber)
+            }
+          } yield maybeCustomerDetails
       }
 
     } yield maybeCustomerDetails)
